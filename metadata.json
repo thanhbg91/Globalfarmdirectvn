@@ -1,0 +1,6 @@
+{
+  "name": "Sàn Giao Dịch Nông Sản Việt",
+  "description": "Ứng dụng thương mại điện tử kết nối trực tiếp nông dân với người tiêu dùng, hỗ trợ trao đổi, mua bán nông sản tươi sạch kèm tư vấn AI.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

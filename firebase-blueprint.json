@@ -1,0 +1,130 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile for farmer or consumer",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["farmer", "consumer"] },
+        "phone": { "type": "string" },
+        "address": { "type": "string" },
+        "farmName": { "type": "string" },
+        "farmDescription": { "type": "string" },
+        "avatarUrl": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "displayName", "role", "createdAt"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Agricultural product listed by a farmer",
+      "type": "object",
+      "properties": {
+        "farmerId": { "type": "string" },
+        "farmerName": { "type": "string" },
+        "name": { "type": "string" },
+        "category": { "type": "string" },
+        "description": { "type": "string" },
+        "price": { "type": "number" },
+        "unit": { "type": "string" },
+        "quantity": { "type": "number" },
+        "harvestDate": { "type": "string" },
+        "location": { "type": "string" },
+        "isOrganic": { "type": "boolean" },
+        "imageUrl": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["farmerId", "farmerName", "name", "category", "price", "unit", "quantity", "location", "createdAt"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Order made by a consumer",
+      "type": "object",
+      "properties": {
+        "consumerId": { "type": "string" },
+        "consumerName": { "type": "string" },
+        "farmerId": { "type": "string" },
+        "farmerName": { "type": "string" },
+        "productId": { "type": "string" },
+        "productName": { "type": "string" },
+        "quantity": { "type": "number" },
+        "totalPrice": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "accepted", "shipped", "completed", "cancelled"] },
+        "shippingAddress": { "type": "string" },
+        "phone": { "type": "string" },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["consumerId", "consumerName", "farmerId", "farmerName", "productId", "productName", "quantity", "totalPrice", "status", "shippingAddress", "phone", "createdAt", "updatedAt"]
+    },
+    "Chat": {
+      "title": "Chat",
+      "description": "Chat session between farmer and consumer",
+      "type": "object",
+      "properties": {
+        "farmerId": { "type": "string" },
+        "consumerId": { "type": "string" },
+        "farmerName": { "type": "string" },
+        "consumerName": { "type": "string" },
+        "lastMessage": { "type": "string" },
+        "lastMessageAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["farmerId", "consumerId", "farmerName", "consumerName", "lastMessage", "lastMessageAt"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "Message in a chat session",
+      "type": "object",
+      "properties": {
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "text": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["senderId", "senderName", "text", "createdAt"]
+    },
+    "Review": {
+      "title": "Review",
+      "description": "Product review left by a consumer",
+      "type": "object",
+      "properties": {
+        "productId": { "type": "string" },
+        "consumerId": { "type": "string" },
+        "consumerName": { "type": "string" },
+        "rating": { "type": "number" },
+        "comment": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["productId", "consumerId", "consumerName", "rating", "comment", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Stores farmer and consumer user profile information"
+    },
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Stores agricultural products details listed by farmers"
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Stores details of orders placed by consumers"
+    },
+    "/chats/{chatId}": {
+      "schema": "Chat",
+      "description": "Stores chat thread heads"
+    },
+    "/chats/{chatId}/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Stores individual messages inside a chat thread"
+    },
+    "/reviews/{reviewId}": {
+      "schema": "Review",
+      "description": "Stores product reviews and feedback"
+    }
+  }
+}

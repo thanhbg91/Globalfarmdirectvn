@@ -1,0 +1,162 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helper Functions ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // --- Validation Blueprints ---
+    function isValidUser(data) {
+      return data.email is string && data.email.size() <= 128
+        && data.displayName is string && data.displayName.size() <= 128
+        && data.role in ['farmer', 'consumer']
+        && (!('id' in data) || (data.id is string && data.id.size() <= 128))
+        && (!('phone' in data) || (data.phone is string && data.phone.size() <= 20))
+        && (!('address' in data) || (data.address is string && data.address.size() <= 256))
+        && (!('farmName' in data) || (data.farmName is string && data.farmName.size() <= 128))
+        && (!('farmDescription' in data) || (data.farmDescription is string && data.farmDescription.size() <= 1024))
+        && (!('farmAddress' in data) || (data.farmAddress is string && data.farmAddress.size() <= 256))
+        && (!('farmScale' in data) || (data.farmScale is string && data.farmScale.size() <= 128))
+        && (!('certifications' in data) || (data.certifications is string && data.certifications.size() <= 128))
+        && (!('avatarUrl' in data) || (data.avatarUrl is string && data.avatarUrl.size() <= 512))
+        && (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 64));
+    }
+
+    function isValidProduct(data) {
+      return data.farmerId is string && data.farmerId == request.auth.uid
+        && data.farmerName is string && data.farmerName.size() <= 128
+        && data.name is string && data.name.size() <= 128
+        && data.category is string && data.category.size() <= 64
+        && data.description is string && data.description.size() <= 2048
+        && data.price is number && data.price >= 0
+        && data.unit is string && data.unit.size() <= 32
+        && data.quantity is number && data.quantity >= 0
+        && data.location is string && data.location.size() <= 128
+        && (!('id' in data) || (data.id is string && data.id.size() <= 128))
+        && (!('isOrganic' in data) || data.isOrganic is bool)
+        && (!('harvestDate' in data) || (data.harvestDate is string && data.harvestDate.size() <= 32))
+        && (!('imageUrl' in data) || (data.imageUrl is string && data.imageUrl.size() <= 512))
+        && (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 64));
+    }
+
+    function isValidOrder(data) {
+      return data.consumerId is string
+        && data.farmerId is string
+        && data.productId is string
+        && data.quantity is number && data.quantity > 0
+        && data.totalPrice is number && data.totalPrice >= 0
+        && data.status in ['pending', 'accepted', 'shipped', 'completed', 'cancelled']
+        && data.shippingAddress is string && data.shippingAddress.size() <= 256
+        && data.phone is string && data.phone.size() <= 20
+        && (!('consumerName' in data) || (data.consumerName is string && data.consumerName.size() <= 128))
+        && (!('farmerName' in data) || (data.farmerName is string && data.farmerName.size() <= 128))
+        && (!('productName' in data) || (data.productName is string && data.productName.size() <= 128))
+        && (!('id' in data) || (data.id is string && data.id.size() <= 128))
+        && (!('notes' in data) || (data.notes is string && data.notes.size() <= 512))
+        && (!('paymentMethod' in data) || (data.paymentMethod is string && data.paymentMethod in ['cod', 'pi']))
+        && (!('piTxId' in data) || (data.piTxId is string && data.piTxId.size() <= 256))
+        && (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 64))
+        && (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 64));
+    }
+
+    function isValidChat(data) {
+      return data.farmerId is string && data.farmerId.size() <= 128
+        && data.consumerId is string && data.consumerId.size() <= 128
+        && data.farmerName is string && data.farmerName.size() <= 128
+        && data.consumerName is string && data.consumerName.size() <= 128
+        && data.lastMessage is string && data.lastMessage.size() <= 500
+        && (!('id' in data) || (data.id is string && data.id.size() <= 128))
+        && (!('lastMessageAt' in data) || (data.lastMessageAt is string && data.lastMessageAt.size() <= 64));
+    }
+
+    function isValidMessage(data) {
+      return data.senderId is string && data.senderId == request.auth.uid
+        && data.senderName is string && data.senderName.size() <= 128
+        && data.text is string && data.text.size() <= 2048
+        && (!('id' in data) || (data.id is string && data.id.size() <= 128))
+        && (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 64));
+    }
+
+    function isValidReview(data) {
+      return data.productId is string && data.productId.size() <= 128
+        && data.consumerId is string && data.consumerId == request.auth.uid
+        && data.consumerName is string && data.consumerName.size() <= 128
+        && data.rating is number && data.rating >= 1 && data.rating <= 5
+        && data.comment is string && data.comment.size() <= 1024
+        && (!('id' in data) || (data.id is string && data.id.size() <= 128))
+        && (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 64));
+    }
+
+    // --- Rules for Collections ---
+
+    // 1. Users
+    match /users/{userId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isOwner(userId) && isValidUser(incoming());
+    }
+
+    // 2. Products
+    match /products/{productId} {
+      allow read, list: if true; // Public catalog search
+      allow create: if isSignedIn() && isValidId(productId) && isValidProduct(incoming());
+      allow update: if isSignedIn() && isValidId(productId) && (
+        (existing().farmerId == request.auth.uid && isValidProduct(incoming()))
+        || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['quantity']) && incoming().quantity is number && incoming().quantity >= 0)
+      );
+      allow delete: if isSignedIn() && isValidId(productId) && existing().farmerId == request.auth.uid;
+    }
+
+    // 3. Orders
+    match /orders/{orderId} {
+      allow get: if isSignedIn() && (resource == null || resource.data.consumerId == request.auth.uid || resource.data.farmerId == request.auth.uid);
+      allow list: if isSignedIn() && (resource.data.consumerId == request.auth.uid || resource.data.farmerId == request.auth.uid);
+      allow create: if isSignedIn() && isValidId(orderId) && incoming().consumerId == request.auth.uid && isValidOrder(incoming());
+      allow update: if isSignedIn() && isValidId(orderId) && (existing().consumerId == request.auth.uid || existing().farmerId == request.auth.uid) && isValidOrder(incoming());
+      allow delete: if false; // Orders cannot be hard deleted for business integrity
+    }
+
+    // 4. Chats & Messages
+    match /chats/{chatId} {
+      allow get: if isSignedIn() && (request.auth.uid in chatId.split('_') || resource == null || resource.data.consumerId == request.auth.uid || resource.data.farmerId == request.auth.uid);
+      allow list: if isSignedIn() && (resource.data.consumerId == request.auth.uid || resource.data.farmerId == request.auth.uid);
+      allow create: if isSignedIn() && isValidId(chatId) && (incoming().consumerId == request.auth.uid || incoming().farmerId == request.auth.uid) && isValidChat(incoming());
+      allow update: if isSignedIn() && isValidId(chatId) && (existing().consumerId == request.auth.uid || existing().farmerId == request.auth.uid) && isValidChat(incoming());
+
+      match /messages/{messageId} {
+        allow read, list: if isSignedIn();
+        allow create: if isSignedIn() && isValidId(messageId) && isValidMessage(incoming());
+      }
+    }
+
+    // 5. Reviews
+    match /reviews/{reviewId} {
+      allow read, list: if true; // Anyone can read reviews
+      allow create: if isSignedIn() && isValidId(reviewId) && incoming().consumerId == request.auth.uid && isValidReview(incoming());
+      allow update: if isSignedIn() && isValidId(reviewId) && existing().consumerId == request.auth.uid && isValidReview(incoming());
+      allow delete: if isSignedIn() && isValidId(reviewId) && existing().consumerId == request.auth.uid;
+    }
+  }
+}
